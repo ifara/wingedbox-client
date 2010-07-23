@@ -17,6 +17,8 @@ class Api(threading.Thread):
         myfiles = 'http://wingedbox.com/api/archives.xml?login=' \
                 + user + '&password=' + password + '&type=my_files'
         soup = self.obtain_data(myfiles)
+        if soup.find('html') != None:
+            raise Exception("Login Error")
         archives = soup.findAll('archive')
         files = []
         for archive in archives:
@@ -36,8 +38,23 @@ class Api(threading.Thread):
         friendFiles = 'http://wingedbox.com/api/archives.xml?login='\
                 + user + '&password=' + password + '&type=friend_files'
         soup = self.obtain_data(friendFiles)
+        archives = soup.findAll('archive')
+        filesFriends = []
+        for archive in archives:
+            file = {}
+            file['id'] = archive.find('id').text
+            file['accesibility'] = archive.find('accesibility').text
+            type = archive.find('attachment-content-type').text
+            if type.startswith('video') or type.startswith('image'):
+                file['type'] = type.split('/')[0]
+            else:
+                file['type'] = type
+            file['file-name'] = archive.find('attachment-file-name').text
+            file['file-size'] = int(archive.find('attachment-file-size').text)
+            file['name'] = archive.find('name').text
+            filesFriends.append(file)
 
-        self._winged.load_tables(files, [])
+        self._winged.load_tables(files, filesFriends)
 
     def obtain_data(self, link):
         page = self._browser.open(link)

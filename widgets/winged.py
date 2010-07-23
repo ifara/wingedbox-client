@@ -15,27 +15,35 @@ class Winged(QtGui.QWidget):
 
         self._myFiles = MyFiles(self)
         self._tabs.addTab(self._myFiles, QtGui.QIcon(config.images['myfiles']), 'Mis Ficheros')
-        self._friends = FriendFiles()
+        self._friends = FriendFiles(self)
         self._tabs.addTab(self._friends, QtGui.QIcon(config.images['friends']), 'Ficheros de Amigos')
+
+        self._status = QtGui.QStatusBar()
+        self._status.addWidget(QtGui.QLabel('Loading...'))
+        vbox.addWidget(self._status)
 
     def load_tables(self, files, friends):
         self._myFiles.load_table(files)
+        self._friends.load_table(friends)
+        self._status.hide()
+
+    def clean_tables():
+        pass
 
     def show(self):
-        self.setVisible(True)
         self._box.setFixedWidth(800)
         self._box.setFixedHeight(350)
         self._api = Api(self)
         self._api.start()
+        self.setVisible(True)
 
 
-class MyFiles(QtGui.QWidget):
+class FilesUIManager(QtGui.QWidget):
 
-    def __init__(self, winged):
+    def __init__(self):
         QtGui.QWidget.__init__(self)
-        self._winged = winged
-        vbox = QtGui.QVBoxLayout(self)
-        hbox = QtGui.QHBoxLayout()
+        self._vbox = QtGui.QVBoxLayout(self)
+        self._hbox = QtGui.QHBoxLayout()
         self._table = QtGui.QTableWidget(1, 3)
         self._table.setHorizontalHeaderLabels(['Permiso', 'Archivo', 'Size'])
         self._table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -43,26 +51,7 @@ class MyFiles(QtGui.QWidget):
         self._table.setColumnWidth(0, 80)
         self._table.setColumnWidth(1, 480)
         self._table.horizontalHeader().setStretchLastSection(True)
-        hbox.addWidget(self._table)
-        btnDownload = QtGui.QPushButton(QtGui.QIcon(config.images['download']), '')
-        btnDelete = QtGui.QPushButton(QtGui.QIcon(config.images['delete']), '')
-        btnFacebook = QtGui.QPushButton(QtGui.QIcon(config.images['facebook']), '')
-        btnTwitter = QtGui.QPushButton(QtGui.QIcon(config.images['twitter']), '')
-        btnPreview = QtGui.QPushButton(QtGui.QIcon(config.images['preview']), '')
-        btnDelete.setEnabled(False)
-        btnPreview.setEnabled(False)
-        vbox2 = QtGui.QVBoxLayout()
-        vbox2.addWidget(btnDownload)
-        vbox2.addWidget(btnDelete)
-        vbox2.addWidget(btnFacebook)
-        vbox2.addWidget(btnTwitter)
-        vbox2.addWidget(btnPreview)
-        hbox.addLayout(vbox2)
-        vbox.addLayout(hbox)
-
-        self.connect(btnDownload, QtCore.SIGNAL("clicked()"), self._save)
-        self.connect(btnFacebook, QtCore.SIGNAL("clicked()"), self._facebook)
-        self.connect(btnTwitter, QtCore.SIGNAL("clicked()"), self._twitter)
+        self._hbox.addWidget(self._table)
 
     def _save(self):
         file = self._files[self._table.currentRow()]
@@ -81,23 +70,63 @@ class MyFiles(QtGui.QWidget):
         r = 0
         for file in files:
             self._table.insertRow(r)
-            item = QtGui.QTableWidgetItem(file['name'])
+            if len(file['name']) > 0:
+                item = QtGui.QTableWidgetItem(file['name'])
+            else:
+                item = QtGui.QTableWidgetItem(file['file-name'])
             item.setFlags( QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled )
             self._table.setItem(r, 1, item)
             item = QtGui.QTableWidgetItem(str(file['file-size'] / 1024) + ' kb')
             item.setFlags( QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled )
             self._table.setItem(r, 2, item)
-            imageFile = config.type[file['type']]
+            imageFile = config.type.get(file['type'], config.typeBlank)
             access = config.access[file['accesibility']]
             item = QtGui.QTableWidgetItem(QtGui.QIcon(imageFile), access[3])
             item.setBackgroundColor(QtGui.QColor(access[0], access[1], access[2]))
             item.setFlags( QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled )
             self._table.setItem(r, 0, item)
             r += 1
+        self.connect(self._btnDownload, QtCore.SIGNAL("clicked()"), self._save)
+        self.connect(self._btnFacebook, QtCore.SIGNAL("clicked()"), self._facebook)
+        self.connect(self._btnTwitter, QtCore.SIGNAL("clicked()"), self._twitter)
 
 
-class FriendFiles(QtGui.QWidget):
+class MyFiles(FilesUIManager):
 
-    def __init__(self):
-        QtGui.QWidget.__init__(self)
-        vbox = QtGui.QVBoxLayout(self)
+    def __init__(self, winged):
+        FilesUIManager.__init__(self)
+        self._winged = winged
+        self._btnDownload = QtGui.QPushButton(QtGui.QIcon(config.images['download']), '')
+        btnDelete = QtGui.QPushButton(QtGui.QIcon(config.images['delete']), '')
+        self._btnFacebook = QtGui.QPushButton(QtGui.QIcon(config.images['facebook']), '')
+        self._btnTwitter = QtGui.QPushButton(QtGui.QIcon(config.images['twitter']), '')
+        btnPreview = QtGui.QPushButton(QtGui.QIcon(config.images['preview']), '')
+        btnDelete.setEnabled(False)
+        btnPreview.setEnabled(False)
+        vbox2 = QtGui.QVBoxLayout()
+        vbox2.addWidget(self._btnDownload)
+        vbox2.addWidget(btnDelete)
+        vbox2.addWidget(self._btnFacebook)
+        vbox2.addWidget(self._btnTwitter)
+        vbox2.addWidget(btnPreview)
+        self._hbox.addLayout(vbox2)
+        self._vbox.addLayout(self._hbox)
+
+
+class FriendFiles(FilesUIManager):
+
+    def __init__(self, winged):
+        FilesUIManager.__init__(self)
+        self._winged = winged
+        self._btnDownload = QtGui.QPushButton(QtGui.QIcon(config.images['download']), '')
+        self._btnFacebook = QtGui.QPushButton(QtGui.QIcon(config.images['facebook']), '')
+        self._btnTwitter = QtGui.QPushButton(QtGui.QIcon(config.images['twitter']), '')
+        btnPreview = QtGui.QPushButton(QtGui.QIcon(config.images['preview']), '')
+        btnPreview.setEnabled(False)
+        vbox2 = QtGui.QVBoxLayout()
+        vbox2.addWidget(self._btnDownload)
+        vbox2.addWidget(self._btnFacebook)
+        vbox2.addWidget(self._btnTwitter)
+        vbox2.addWidget(btnPreview)
+        self._hbox.addLayout(vbox2)
+        self._vbox.addLayout(self._hbox)

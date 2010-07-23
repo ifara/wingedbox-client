@@ -7,10 +7,12 @@ images = {'logo':os.getcwd() + '/img/logo_row.png',
                     'delete':os.getcwd() + '/img/erase.png',
                     'facebook':os.getcwd() + '/img/facebook.png',
                     'twitter':os.getcwd() + '/img/twitter.png',
-                    'preview':os.getcwd() + '/img/preview.png'}
+                    'preview':os.getcwd() + '/img/preview.png',
+                    'loading':os.getcwd() + '/img/loading52.gif'}
 type = {'image':os.getcwd()+'/img/image.png',
         'application/pdf':os.getcwd()+'/img/pdf.png',
         'application/zip':os.getcwd()+'/img/zip.png',
         'video':os.getcwd()+'/img/video.png'}
+typeBlank = os.getcwd()+'/img/blank.png'
 access = {'0':[144, 34, 37, 'Privado'], '1':[150, 153, 47, 'Amigos'], '2':[56, 110, 47, 'Publico']}
 users = os.getcwd() + '/.config/wingedbox/'

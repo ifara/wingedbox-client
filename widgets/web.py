@@ -4,6 +4,7 @@ class Web(QtGui.QDialog):
 
     def __init__(self, parent, url):
         QtGui.QDialog.__init__(self, parent)
+        self.setWindowTitle('Register a New User')
         self.setFixedWidth(1000)
         v = QtGui.QVBoxLayout(self)
         self._web = QtWebKit.QWebView()

@@ -56,6 +56,18 @@ class Api(threading.Thread):
 
         self._winged.load_tables(files, filesFriends)
 
+    def login(self, user, password):
+        myfiles = 'http://wingedbox.com/api/sessions.xml?login=' \
+                + user + '&password=' + password
+        soup = self.obtain_data(myfiles)
+        auth = soup.find('auth')
+        if auth.text == 'OK':
+            return 0
+        elif auth.text == 'NOK':
+            return 1
+        elif auth.text == 'NF':
+            return 2
+
     def obtain_data(self, link):
         page = self._browser.open(link)
         soup = BeautifulSoup(page.read())

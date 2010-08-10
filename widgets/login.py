@@ -4,6 +4,7 @@ from PyQt4 import QtGui, QtCore
 
 from web import Web
 import config
+import api
 
 class Login(QtGui.QWidget):
 
@@ -26,6 +27,9 @@ class Login(QtGui.QWidget):
         labIcon = QtGui.QLabel('')
         labIcon.setPixmap(pixmap)
         vbox.addWidget(labIcon)
+        self._labelMessage = QtGui.QLabel('<font color=#FF0000><b>Login Failed!</b></font>')
+        self._labelMessage.setVisible(False)
+        vbox.addWidget(self._labelMessage)
         #Login
         grid = QtGui.QGridLayout()
         labEmail = QtGui.QLabel('e-mail: ')
@@ -56,25 +60,35 @@ class Login(QtGui.QWidget):
         self.connect(self._btnLogin, QtCore.SIGNAL("clicked()"), self._init_session)
 
     def _init_session(self):
+        self._labelMessage.setVisible(False)
         self._winged.user = str(self._txtEmail.text()).replace('\n', '')
         self._winged.password = str(self._txtPass.text())
-        self._winged._myfiles.setEnabled(True)
-        self._winged._init.setVisible(False)
-        self._winged._close.setVisible(True)
-        if self._checkRemember.isChecked():
-            self._names.append(self._winged.user + '\n')
-            self._config = open(config.users + 'users.cfg', 'w')
-            self._config.writelines(self._names)
-        self._config.close()
-        self.hide()
-        self._winged._winged.show()
+        bot = api.Api(self._winged)
+        auth = bot.login(self._winged.user, self._winged.password)
+        if auth == 0:
+            self._winged._myfiles.setEnabled(True)
+            self._winged._init.setVisible(False)
+            self._winged._close.setVisible(True)
+            if self._checkRemember.isChecked():
+                self._names.append(self._winged.user + '\n')
+                self._config = open(config.users + 'users.cfg', 'w')
+                self._config.writelines(self._names)
+            self._config.close()
+            self.hide()
+            self._winged._winged.show()
+        elif auth == 1:
+            self._labelMessage.setVisible(True)
+            self._txtEmail.setFocus()
+        else:
+            self._labelMessage.setVisible(True)
+            self.open_login_web()
 
     def _check_remember(self):
         if str(self._txtEmail.text()) in self._names:
             self._checkRemember.setChecked(True)
 
     def open_login_web(self):
-        web = Web(self, 'http://wingedbox.com/')
+        web = Web(self, 'http://wingedbox.com/register')
         web.show()
 
     def show(self):

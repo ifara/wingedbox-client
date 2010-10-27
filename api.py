@@ -4,23 +4,21 @@ import webbrowser
 
 from BeautifulSoup import BeautifulSoup
 
-class Api(threading.Thread):
+class Api(object):
 
-    def __init__(self, winged):
-        threading.Thread.__init__(self)
-        self._winged = winged
+    def __init__(self, user, password):
+        self.user = user
+        self.password = password
         self._browser = Browser()
 
-    def run(self):
-        user = self._winged._box.user
-        password = self._winged._box.password
+    def get_files(self):
         myfiles = 'http://wingedbox.com/api/archives.xml?login=' \
-                + user + '&password=' + password + '&type=my_files'
+                + self.user + '&password=' + self.password + '&type=my_files'
         soup = self.obtain_data(myfiles)
         if soup.find('html') != None:
             raise Exception("Login Error")
         archives = soup.findAll('archive')
-        files = []
+        self.files = []
         for archive in archives:
             file = {}
             file['id'] = archive.find('id').text
@@ -33,13 +31,13 @@ class Api(threading.Thread):
             file['file-name'] = archive.find('attachment-file-name').text
             file['file-size'] = int(archive.find('attachment-file-size').text)
             file['name'] = archive.find('name').text
-            files.append(file)
+            self.files.append(file)
         
         friendFiles = 'http://wingedbox.com/api/archives.xml?login='\
-                + user + '&password=' + password + '&type=friend_files'
+                + self.user + '&password=' + self.password + '&type=friend_files'
         soup = self.obtain_data(friendFiles)
         archives = soup.findAll('archive')
-        filesFriends = []
+        self.filesFriends = []
         for archive in archives:
             file = {}
             file['id'] = archive.find('id').text
@@ -52,13 +50,11 @@ class Api(threading.Thread):
             file['file-name'] = archive.find('attachment-file-name').text
             file['file-size'] = int(archive.find('attachment-file-size').text)
             file['name'] = archive.find('name').text
-            filesFriends.append(file)
+            self.filesFriends.append(file)
 
-        self._winged.load_tables(files, filesFriends)
-
-    def login(self, user, password):
+    def login(self):
         myfiles = 'http://wingedbox.com/api/sessions.xml?login=' \
-                + user + '&password=' + password
+                + self.user + '&password=' + self.password
         soup = self.obtain_data(myfiles)
         auth = soup.find('auth')
         if auth.text == 'OK':

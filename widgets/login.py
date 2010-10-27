@@ -63,8 +63,8 @@ class Login(QtGui.QWidget):
         self._labelMessage.setVisible(False)
         self._winged.user = str(self._txtEmail.text()).replace('\n', '')
         self._winged.password = str(self._txtPass.text())
-        bot = api.Api(self._winged)
-        auth = bot.login(self._winged.user, self._winged.password)
+        bot = api.Api(self._winged.user, self._winged.password)
+        auth = bot.login()
         if auth == 0:
             self._winged._myfiles.setEnabled(True)
             self._winged._init.setVisible(False)

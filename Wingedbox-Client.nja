@@ -1,0 +1,8 @@
+{
+  "mainFile": "wingedbox.py", 
+  "name": "Wingedbox-Client", 
+  "license": "GNU General Public License v3", 
+  "url": "", 
+  "project-type": "python", 
+  "description": "WingedBox Client"
+}

@@ -21,21 +21,27 @@ css_styles = """WingedBox {
          }
 
         QCheckBox{
+            border-style: solid;
             color: black;
         }
 
         QPushButton:hover {
             background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                 stop: 0 #FAFBFE, stop: 1 #9999FF);
+                                 stop: 0 #FAFBFE, stop: 1 #66CC00);
         }
 
-        QTableWidget {
-            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        QStatusBar {
+         background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
              stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
              stop: 0.5 #D8D8D8, stop: 1.0 #969696);
-             color: #333333;
-        }
+         border-radius: 10px;
+         border-style: solid;
+         color: black;
+         }
         """
 
 def apply(widget):
     widget.setStyleSheet(css_styles)
+
+def apply_css(widget, css):
+    widget.setStyleSheet(css)

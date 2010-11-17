@@ -10,33 +10,42 @@ from PyQt4.QtGui import QPixmap
 from PyQt4.QtGui import QPainter
 from PyQt4.QtGui import QPalette
 from PyQt4.QtGui import QPen
+from PyQt4.QtGui import QSystemTrayIcon
 from PyQt4.QtGui import QStackedWidget
 from PyQt4.QtGui import QHBoxLayout
-from PyQt4.QtGui import QStatusBar
 from PyQt4.QtGui import QVBoxLayout
+from PyQt4.QtGui import QShortcut
+from PyQt4.QtGui import QKeySequence
 from PyQt4.QtCore import QTimeLine
 from PyQt4.QtCore import QThread
+from PyQt4.QtCore import QTimer
 from PyQt4.QtCore import SIGNAL
 from PyQt4.QtCore import Qt
 
 from files_manager import MyFiles
 from files_manager import FriendFiles
+from files_manager import UploadFiles
+from files_manager import InviteFriends
+from thread_winged import Thread
 from api import Api
+from web import Web
+from status_bar import StatusBar
 import config
 
 class Winged(QWidget):
 
-    def __init__(self, box):
+    def __init__(self, box, pref):
         QWidget.__init__(self)
         self._box = box
+        self.pref = pref
 
         vbox = QVBoxLayout(self)
 
         hbox = QHBoxLayout()
-        self.btnMyFiles = QPushButton(QIcon(config.images['myfiles']), 'Mis Ficheros')
-        self.btnFriendFiles = QPushButton(QIcon(config.images['friends']), 'Ficheros de Amigos')
-        self.btnUpload = QPushButton(QIcon(config.images['upload']), 'Subir Ficheros')
-        self.btnFind = QPushButton(QIcon(config.images['search']), 'Buscar Amigos')
+        self.btnMyFiles = QPushButton(QIcon(config.images['myfiles']), 'My Files')
+        self.btnFriendFiles = QPushButton(QIcon(config.images['friends']), 'Friends Files')
+        self.btnUpload = QPushButton(QIcon(config.images['upload']), 'Manage/Upload')
+        self.btnFind = QPushButton(QIcon(config.images['search']), 'Find Friends')
         hbox.addWidget(self.btnMyFiles)
         hbox.addWidget(self.btnFriendFiles)
         hbox.addWidget(self.btnUpload)
@@ -44,39 +53,106 @@ class Winged(QWidget):
         vbox.addLayout(hbox)
 
         self.stack = StackedWidget()
-        self.myFiles = MyFiles(self)
+        self.myFiles = MyFiles(self, self.pref)
         self.stack.addWidget(self.myFiles)
-        self.friendFiles = FriendFiles(self)
+        self.friendFiles = FriendFiles(self, self.pref)
         self.stack.addWidget(self.friendFiles)
+        self.uploadFiles = UploadFiles()
+        self.stack.addWidget(self.uploadFiles)
+        self.inviteFriends = InviteFriends(self)
+        self.stack.addWidget(self.inviteFriends)
         vbox.addWidget(self.stack)
 
-        self._status = QStatusBar()
-        self._status.addWidget(QLabel('Downloading...'))
+        self._status = StatusBar(self)
         self._status.hide()
         vbox.addWidget(self._status)
 
         self.overlay = Overlay(self)
         self.overlay.show()
 
+        self.shortFind = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_F), self)
+        
         self.connect(self.btnMyFiles, SIGNAL("clicked()"), lambda: self.stack.setCurrentIndex(0))
         self.connect(self.btnFriendFiles, SIGNAL("clicked()"), lambda: self.stack.setCurrentIndex(1))
+        self.connect(self.btnUpload, SIGNAL("clicked()"), lambda: self.stack.setCurrentIndex(2))
+        self.connect(self.btnFind, SIGNAL("clicked()"), lambda: self.stack.setCurrentIndex(3))
+        self.connect(self.shortFind, SIGNAL("activated()"), self._status.show_status)
+
+        self.timer = QTimer(self)
+        self.connect(self.timer, SIGNAL("timeout()"), self.update)
+        self.timer.start(self.pref.get('time', 10) * 1000 * 60)
+
+    def update(self):
+        self.tempSizeFiles = self.sizeMyFiles
+        self.tempSizeFriends = self.sizeFriendFiles
+        self.thread.executable = self.thread.update_files
+        self.thread.start()
+
+    def find_friend(self, name):
+        self.thread.api.invite(name)
+
+    def files_updated(self):
+        self.load_tables()
+        if self.tempSizeFiles != self.sizeMyFiles or self.tempSizeFriends != self.sizeFriendFiles:
+            self.show_tray_message('New Files added!')
+
+    def find(self, text):
+        widget = self.stack.currentWidget()
+        widget.find(text)
+
+    def delete(self, data):
+        self.thread.api.delete_file(data)
+
+    def preview_item(self, link):
+        html = '<html><body><img src="' + link + '"/></body></html>'
+        self.web = Web(self, '', html)
+        self.web.show()
+
+    def save_file(self, data, folder):
+        self.myFiles._btnDownload.setEnabled(False)
+        self.friendFiles._btnDownload.setEnabled(False)
+        self._status.showMessage('DOWNLOADING...', 2000)
+        self.thread.data = data
+        self.thread.folder = folder
+        self.thread.executable = self.thread.download_file
+        self.thread.start()
 
     def load_tables(self):
         self.overlay.hide()
-        self.myFiles.load_table(self.t.api.files)
-        self.friendFiles.load_table(self.t.api.filesFriends)
+        self.myFiles.load_table(self.thread.api.files)
+        self.friendFiles.load_table(self.thread.api.filesFriends)
+        self.sizeMyFiles = len(self.thread.api.files)
+        self.sizeFriendFiles = len(self.thread.api.filesFriends)
         self._status.hide()
 
     def clean_tables(self):
-        pass
+        rowsCount = range(self.myFiles._table.rowCount())
+        rowsCount.reverse()
+        for i in rowsCount:
+            self.myFiles._table.removeRow(i)
+        rowsCount = range(self.friendFiles._table.rowCount())
+        rowsCount.reverse()
+        for i in rowsCount:
+            self.friendFiles._table.removeRow(i)
 
     def show(self):
         self._box.setFixedWidth(800)
         self._box.setFixedHeight(350)
-        self.t = Thread(self._box.user, self._box.password)
-        self.connect(self.t, SIGNAL("finished()"), self.load_tables)
-        self.t.start()
+        self.thread = Thread(self._box.user, self._box.password)
+        self.thread.executable = self.thread.get_files
+        self.connect(self.thread, SIGNAL("filesList()"), self.load_tables)
+        self.connect(self.thread, SIGNAL("filesUpdated()"), self.files_updated)
+        self.connect(self.thread, SIGNAL("downloadFinished(QString)"), self.download_complete)
+        self.thread.start()
         self.setVisible(True)
+
+    def download_complete(self, name):
+        self.show_tray_message('DOWNLOAD COMPLETE: ' + name)
+        self.myFiles._btnDownload.setEnabled(True)
+        self.friendFiles._btnDownload.setEnabled(True)
+
+    def show_tray_message(self, message):
+        self._box._tray.showMessage('WingedBox', message, QSystemTrayIcon.Information, 2000)
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
@@ -160,13 +236,3 @@ class Overlay(QWidget):
     def timerEvent(self, event):
         self.counter += 1
         self.update()
-
-
-class Thread(QThread):
-
-    def __init__(self, user, password):
-        QThread.__init__(self)
-        self.api = Api(user, password)
-
-    def run(self):
-        self.api.get_files()

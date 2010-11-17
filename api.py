@@ -1,4 +1,4 @@
-import threading
+import os
 import urllib
 import webbrowser
 
@@ -69,20 +69,38 @@ class Api(object):
         soup = BeautifulSoup(page.read())
         return soup
 
-    def download_file(self, id):
-        down = 'http://wingedbox.com/downloads/' + id
-        webbrowser.open(down)
+    def download_file(self, data, folder):
+        down = 'http://wingedbox.com/downloads/' + data['id'] + '-' + data['file-name']
+        content = self._browser.open(down)
+        fileName = os.path.join(folder, data['file-name'])
+        f = open(fileName, 'w')
+        f.write(content.read())
+        f.flush()
+        f.close()
+        content.close()
 
-    def facebook(self, id, name):
-        name = name.replace(' ', '%20')
+    def delete_file(self, data):
+        delete = 'http://wingedbox.com/api/archives/' + data['id'] \
+                + '/delete?login=' + self.user + '&password=' + self.password
+        self._browser.open(delete)
+
+    def invite(self, friendEmail):
+        url = "http://wingedbox.com/api/invitations.xml?login=" + self.user + \
+                "&password=" + self.password + "&friend=" + friendEmail + "&locale=es"
+        self._browser.open(url)
+
+    def facebook(self, data):
+        name = data['name'].replace(' ', '%20')
+        link = data['id'] + '-' + data['file-name']
         link = 'http://www.facebook.com/sharer.php?u=http://wingedbox.com/downloads/'\
-                + id + '&title=' + name
+                + link + '&title=' + name
         webbrowser.open(link)
 
-    def twitter(self, id, name):
-        name = name.replace(' ', '%20')
+    def twitter(self, data):
+        name = data['name'].replace(' ', '%20')
+        link = data['id'] + '-' + data['file-name']
         link = 'http://twitter.com/home?status=Check%20this%20' \
-                + name + '%20http://wingedbox.com/downloads/' + id + '%20uploaded%20to%20@winged_box'
+                + name + '%20http://wingedbox.com/downloads/' + link + '%20uploaded%20to%20@winged_box'
         webbrowser.open(link)
 
 class Browser(urllib.FancyURLopener):

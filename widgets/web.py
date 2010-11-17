@@ -2,7 +2,7 @@ from PyQt4 import QtCore, QtGui, QtWebKit
 
 class Web(QtGui.QDialog):
 
-    def __init__(self, parent, url):
+    def __init__(self, parent, url, html):
         QtGui.QDialog.__init__(self, parent)
         self.setWindowTitle('Register a New User')
         self.setFixedWidth(1000)
@@ -20,8 +20,11 @@ class Web(QtGui.QDialog):
         self.connect(self._web, QtCore.SIGNAL("loadFinished(bool)"), self._status.hide)
         self.connect(self._web, QtCore.SIGNAL("loadProgress(int)"), self._progress)
         self.connect(self._web, QtCore.SIGNAL("loadStarted()"), self._status.show)
-        if url != '':
+        if url != '' and html == '':
             self._web.load(QtCore.QUrl(url))
+        elif html != '':
+            self.setWindowTitle('Preview')
+            self._web.setHtml(html)
 
     def _progress(self, porc):
         self._prog.setValue(porc)
